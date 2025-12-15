@@ -134,18 +134,18 @@ def register_admin_routes(app):
         per_page = 50
 
         # Получаем логи с пагинацией
-        logs = db.session.execute("""
+        logs = db.session.execute(text("""
             SELECT "ID_LOG", "LIST_ID", "USER_NAME", "DATE_IZM", "TIME_IZM"
             FROM "LOG" 
             ORDER BY "ID_LOG" DESC 
             LIMIT :limit OFFSET :offset
-        """, {
+        """), {
             'limit': per_page,
             'offset': (page - 1) * per_page
         }).fetchall()
 
         # Общее количество записей
-        total_count = db.session.execute('SELECT COUNT(*) FROM "LOG"').scalar()
+        total_count = db.session.execute(text('SELECT COUNT(*) FROM "LOG"')).scalar()
 
         # Информация о пагинации
         has_prev = page > 1
@@ -167,19 +167,19 @@ def register_admin_routes(app):
     def admin_reports():
         """Главная страница отчетов"""
         # Получаем быструю статистику
-        total_repatriants = db.session.execute('SELECT COUNT(*) FROM "MAIN"').scalar()
-        total_users = db.session.execute('SELECT COUNT(*) FROM "USERS" WHERE "IS_ACTIVE" = TRUE').scalar()
+        total_repatriants = db.session.execute(text('SELECT COUNT(*) FROM "MAIN"')).scalar()
+        total_users = db.session.execute(text('SELECT COUNT(*) FROM "USERS" WHERE "IS_ACTIVE" = TRUE')).scalar()
 
         # Регистрации сегодня
         today = datetime.now().date()
-        registrations_today = db.session.execute("""
+        registrations_today = db.session.execute(text("""
             SELECT COUNT(*) FROM "LOG" 
             WHERE "DATE_IZM" = :today 
             AND "USER_NAME" LIKE '%Зарегистрирован репатриант%'
-        """, {'today': today}).scalar()
+        """), {'today': today}).scalar()
 
         # Общее количество действий
-        total_logs = db.session.execute('SELECT COUNT(*) FROM "LOG"').scalar()
+        total_logs = db.session.execute(text('SELECT COUNT(*) FROM "LOG"')).scalar()
 
         return render_template('admin/reports.html',
                              total_repatriants=total_repatriants,
@@ -215,7 +215,7 @@ def register_admin_routes(app):
         ).order_by(OtherRecord.created_at.desc()).limit(100).all()
 
         # Статистика по типам помощи
-        help_type_stats = db.session.execute("""
+        help_type_stats = db.session.execute(text("""
             SELECT 
                 CASE 
                     WHEN "CUSTOM_HELP_TYPE" IS NOT NULL AND "CUSTOM_HELP_TYPE" != '' 
@@ -226,16 +226,16 @@ def register_admin_routes(app):
             FROM "SOCIAL_HELP_RECORDS"
             GROUP BY help_type
             ORDER BY count DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Статистика по типам мероприятий
-        event_type_stats = db.session.execute("""
+        event_type_stats = db.session.execute(text("""
             SELECT "EVENT_TYPE", COUNT(*) as count
             FROM "EVENT_RECORDS"
             WHERE "EVENT_TYPE" IS NOT NULL AND "EVENT_TYPE" != ''
             GROUP BY "EVENT_TYPE"
             ORDER BY count DESC
-        """).fetchall()
+        """)).fetchall()
 
         return render_template('admin/report_social_adaptation.html',
                              total_housing=total_housing,
@@ -254,48 +254,48 @@ def register_admin_routes(app):
     def report_repatriants():
         """Отчет по статистике репатриантов"""
         # Общая статистика
-        total_count = db.session.execute('SELECT COUNT(*) FROM "MAIN"').scalar()
+        total_count = db.session.execute(text('SELECT COUNT(*) FROM "MAIN"')).scalar()
 
         # По полу
-        sex_stats = db.session.execute("""
+        sex_stats = db.session.execute(text("""
             SELECT "SEX", COUNT(*) as count
             FROM "MAIN"
             WHERE "SEX" IS NOT NULL
             GROUP BY "SEX"
             ORDER BY count DESC
-        """).fetchall()
+        """)).fetchall()
 
         # По странам прибытия
-        country_stats = db.session.execute("""
+        country_stats = db.session.execute(text("""
             SELECT "FROM_LOC", COUNT(*) as count
             FROM "MAIN"
             WHERE "FROM_LOC" IS NOT NULL AND "FROM_LOC" != ''
             GROUP BY "FROM_LOC"
             ORDER BY count DESC
             LIMIT 10
-        """).fetchall()
+        """)).fetchall()
 
         # По национальности
-        nationality_stats = db.session.execute("""
+        nationality_stats = db.session.execute(text("""
             SELECT "REZERV", COUNT(*) as count
             FROM "MAIN"
             WHERE "REZERV" IS NOT NULL AND "REZERV" != ''
             GROUP BY "REZERV"
             ORDER BY count DESC
             LIMIT 10
-        """).fetchall()
+        """)).fetchall()
 
         # По семейному положению
-        family_status_stats = db.session.execute("""
+        family_status_stats = db.session.execute(text("""
             SELECT "SEM_POLOJ", COUNT(*) as count
             FROM "MAIN"
             WHERE "SEM_POLOJ" IS NOT NULL AND "SEM_POLOJ" != ''
             GROUP BY "SEM_POLOJ"
             ORDER BY count DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Возрастные группы (примерно, по году рождения)
-        age_groups = db.session.execute("""
+        age_groups = db.session.execute(text("""
             SELECT 
                 CASE 
                     WHEN EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM "DATE_R") < 18 THEN 'До 18 лет'
@@ -308,7 +308,7 @@ def register_admin_routes(app):
             WHERE "DATE_R" IS NOT NULL
             GROUP BY age_group
             ORDER BY count DESC
-        """).fetchall()
+        """)).fetchall()
 
         return render_template('admin/report_repatriants.html',
                              total_count=total_count,
@@ -323,7 +323,7 @@ def register_admin_routes(app):
     def report_user_activity():
         """Отчет по активности пользователей"""
         # Активность пользователей по количеству действий
-        user_activity = db.session.execute("""
+        user_activity = db.session.execute(text("""
             SELECT 
                 SUBSTRING("USER_NAME" FROM 1 FOR POSITION(':' IN "USER_NAME") - 1) as username,
                 COUNT(*) as action_count,
@@ -332,24 +332,24 @@ def register_admin_routes(app):
             WHERE "USER_NAME" LIKE '%:%'
             GROUP BY username
             ORDER BY action_count DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Последние входы пользователей
-        last_logins = db.session.execute("""
+        last_logins = db.session.execute(text("""
             SELECT "USERNAME", "LAST_LOGIN", "FULL_NAME"
             FROM "USERS"
             WHERE "IS_ACTIVE" = TRUE
             ORDER BY "LAST_LOGIN" DESC NULLS LAST
-        """).fetchall()
+        """)).fetchall()
 
         # Активность по дням (последние 30 дней)
-        daily_activity = db.session.execute("""
+        daily_activity = db.session.execute(text("""
             SELECT "DATE_IZM", COUNT(*) as actions_count
             FROM "LOG"
             WHERE "DATE_IZM" >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY "DATE_IZM"
             ORDER BY "DATE_IZM" DESC
-        """).fetchall()
+        """)).fetchall()
 
         return render_template('admin/report_user_activity.html',
                              user_activity=user_activity,
@@ -361,17 +361,17 @@ def register_admin_routes(app):
     def report_time_stats():
         """Отчет по временной статистике"""
         # Регистрации по дням (последние 30 дней)
-        daily_registrations = db.session.execute("""
+        daily_registrations = db.session.execute(text("""
             SELECT "DATE_IZM", COUNT(*) as registrations
             FROM "LOG"
             WHERE "DATE_IZM" >= CURRENT_DATE - INTERVAL '30 days'
             AND "USER_NAME" LIKE '%Зарегистрирован репатриант%'
             GROUP BY "DATE_IZM"
             ORDER BY "DATE_IZM" DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Регистрации по месяцам (последние 12 месяцев)
-        monthly_registrations = db.session.execute("""
+        monthly_registrations = db.session.execute(text("""
             SELECT 
                 EXTRACT(YEAR FROM "DATE_IZM") as year,
                 EXTRACT(MONTH FROM "DATE_IZM") as month,
@@ -381,10 +381,10 @@ def register_admin_routes(app):
             AND "USER_NAME" LIKE '%Зарегистрирован репатриант%'
             GROUP BY year, month
             ORDER BY year DESC, month DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Активность по часам дня
-        hourly_activity = db.session.execute("""
+        hourly_activity = db.session.execute(text("""
             SELECT 
                 EXTRACT(HOUR FROM "TIME_IZM") as hour,
                 COUNT(*) as actions_count
@@ -392,7 +392,7 @@ def register_admin_routes(app):
             WHERE "DATE_IZM" >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY hour
             ORDER BY hour
-        """).fetchall()
+        """)).fetchall()
 
         return render_template('admin/report_time_stats.html',
                              daily_registrations=daily_registrations,
@@ -404,30 +404,30 @@ def register_admin_routes(app):
     def report_family_stats():
         """Отчет по семейной статистике"""
         # Общее количество семей
-        total_families = db.session.execute('SELECT COUNT(*) FROM "MAIN"').scalar()
+        total_families = db.session.execute(text('SELECT COUNT(*) FROM "MAIN"')).scalar()
 
         # Статистика по детям
-        children_stats = db.session.execute("""
+        children_stats = db.session.execute(text("""
             SELECT 
                 "LIST_ID",
                 COUNT(*) as children_count
             FROM "CHILDREN"
             GROUP BY "LIST_ID"
             ORDER BY children_count DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Статистика по взрослым членам семьи
-        family_members_stats = db.session.execute("""
+        family_members_stats = db.session.execute(text("""
             SELECT 
                 "LIST_ID",
                 COUNT(*) as family_count
             FROM "FAMILY"
             GROUP BY "LIST_ID"
             ORDER BY family_count DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Многодетные семьи (3+ детей)
-        large_families = db.session.execute("""
+        large_families = db.session.execute(text("""
             SELECT 
                 "LIST_ID",
                 COUNT(*) as children_count
@@ -435,16 +435,16 @@ def register_admin_routes(app):
             GROUP BY "LIST_ID"
             HAVING COUNT(*) >= 3
             ORDER BY children_count DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Одинокие репатрианты (без семьи)
-        single_repatriants = db.session.execute("""
+        single_repatriants = db.session.execute(text("""
             SELECT COUNT(*)
             FROM "MAIN" m
             LEFT JOIN "CHILDREN" c ON m."ID" = c."LIST_ID"
             LEFT JOIN "FAMILY" f ON m."ID" = f."LIST_ID"
             WHERE c."LIST_ID" IS NULL AND f."LIST_ID" IS NULL
-        """).scalar()
+        """)).scalar()
 
         return render_template('admin/report_family_stats.html',
                              total_families=total_families,
@@ -458,12 +458,12 @@ def register_admin_routes(app):
     def report_system():
         """Системные отчеты"""
         # Общая статистика системы
-        total_repatriants = db.session.execute('SELECT COUNT(*) FROM "MAIN"').scalar()
-        total_users = db.session.execute('SELECT COUNT(*) FROM "USERS"').scalar()
-        total_logs = db.session.execute('SELECT COUNT(*) FROM "LOG"').scalar()
+        total_repatriants = db.session.execute(text('SELECT COUNT(*) FROM "MAIN"')).scalar()
+        total_users = db.session.execute(text('SELECT COUNT(*) FROM "USERS"')).scalar()
+        total_logs = db.session.execute(text('SELECT COUNT(*) FROM "LOG"')).scalar()
 
         # Статистика по типам действий
-        action_types = db.session.execute("""
+        action_types = db.session.execute(text("""
             SELECT 
                 CASE 
                     WHEN "USER_NAME" LIKE '%Зарегистрирован репатриант%' THEN 'Регистрации'
@@ -477,10 +477,10 @@ def register_admin_routes(app):
             FROM "LOG"
             GROUP BY action_type
             ORDER BY count DESC
-        """).fetchall()
+        """)).fetchall()
 
         # Активность по дням недели
-        weekday_activity = db.session.execute("""
+        weekday_activity = db.session.execute(text("""
             SELECT 
                 EXTRACT(DOW FROM "DATE_IZM") as day_of_week,
                 COUNT(*) as actions_count
@@ -488,10 +488,10 @@ def register_admin_routes(app):
             WHERE "DATE_IZM" >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY day_of_week
             ORDER BY day_of_week
-        """).fetchall()
+        """)).fetchall()
 
         # Топ пользователей по активности
-        top_users = db.session.execute("""
+        top_users = db.session.execute(text("""
             SELECT 
                 SUBSTRING("USER_NAME" FROM 1 FOR POSITION(':' IN "USER_NAME") - 1) as username,
                 COUNT(*) as action_count
@@ -500,7 +500,7 @@ def register_admin_routes(app):
             GROUP BY username
             ORDER BY action_count DESC
             LIMIT 10
-        """).fetchall()
+        """)).fetchall()
 
         return render_template('admin/report_system.html',
                              total_repatriants=total_repatriants,
@@ -525,11 +525,11 @@ def register_admin_routes(app):
         import io
 
         # Получаем данные репатриантов
-        repatriants = db.session.execute("""
+        repatriants = db.session.execute(text("""
             SELECT "ID", "F", "I", "O", "SEX", "DATE_R", "FROM_LOC", "SEM_POLOJ", "REZERV"
             FROM "MAIN"
             ORDER BY "ID"
-        """).fetchall()
+        """)).fetchall()
 
         if format == 'csv':
             output = io.StringIO()
@@ -582,11 +582,11 @@ def register_admin_routes(app):
         import io
 
         # Получаем логи
-        logs = db.session.execute("""
+        logs = db.session.execute(text("""
             SELECT "ID_LOG", "LIST_ID", "USER_NAME", "DATE_IZM", "TIME_IZM"
             FROM "LOG"
             ORDER BY "ID_LOG" DESC
-        """).fetchall()
+        """)).fetchall()
 
         if format == 'csv':
             output = io.StringIO()
@@ -635,11 +635,11 @@ def register_admin_routes(app):
         import io
 
         # Получаем пользователей
-        users = db.session.execute("""
+        users = db.session.execute(text("""
             SELECT "ID", "USERNAME", "FULL_NAME", "ROLE", "IS_ACTIVE", "CREATED_AT", "LAST_LOGIN"
             FROM "USERS"
             ORDER BY "ID"
-        """).fetchall()
+        """)).fetchall()
 
         if format == 'csv':
             output = io.StringIO()
@@ -690,18 +690,18 @@ def register_admin_routes(app):
         import io
 
         # Получаем детей
-        children = db.session.execute("""
+        children = db.session.execute(text("""
             SELECT "LIST_ID", "STEP_ROD", "F", "I", "O", "GOD_R", "GRAJDANSTVO", "NACIONALNOST"
             FROM "CHILDREN"
             ORDER BY "LIST_ID", "ID"
-        """).fetchall()
+        """)).fetchall()
 
         # Получаем взрослых членов семьи
-        family_members = db.session.execute("""
+        family_members = db.session.execute(text("""
             SELECT "LIST_ID", "STEP_ROD", "F", "I", "O", "GOD_R", "GRAJDANSTVO", "NACIONALNOST"
             FROM "FAMILY"
             ORDER BY "LIST_ID", "ID"
-        """).fetchall()
+        """)).fetchall()
 
         if format == 'csv':
             output = io.StringIO()

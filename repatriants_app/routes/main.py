@@ -809,12 +809,12 @@ def register_main_routes(app):
         # Получаем историю действий для этого репатрианта (только для админов)
         action_history = []
         if session.get('role') == 'ADMIN':
-            action_history = db.session.execute("""
+            action_history = db.session.execute(text("""
                 SELECT "USER_NAME", "DATE_IZM", "TIME_IZM"
                 FROM "LOG" 
                 WHERE "LIST_ID" = :repatriant_id
                 ORDER BY "ID_LOG" ASC
-            """, {'repatriant_id': id}).fetchall()
+            """), {'repatriant_id': id}).fetchall()
 
         return render_template('view.html', 
                              repatriant=repatriant, 
