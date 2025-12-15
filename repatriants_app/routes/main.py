@@ -737,10 +737,30 @@ def register_main_routes(app):
 
     # Маршрут для отображения загруженных файлов
     @app.route('/uploads/<path:filename>')
-    @login_required
     def uploaded_file(filename):
         """Отображает загруженные файлы"""
         print(f"Запрос файла: {filename}")
+
+        # Временные PDF для предпросмотра могут запрашиваться клиентом без cookies/сессии
+        # (например, через PDF.js). Для них не требуем авторизацию.
+        if filename.startswith('temp/') and filename.lower().endswith('.pdf'):
+            print(f"Ищем во временной папке: {app.config['UPLOAD_FOLDER']}/{filename}")
+            return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+        # Для всех остальных файлов требуем авторизацию (поведение как у @login_required)
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+
+        # Проверяем, не истекла ли сессия (24 часа)
+        if 'last_activity' in session:
+            last_activity = datetime.fromisoformat(session['last_activity'])
+            if datetime.now() - last_activity > timedelta(hours=24):
+                session.clear()
+                flash('Сессия истекла. Пожалуйста, войдите снова.', 'warning')
+                return redirect(url_for('login'))
+
+        # Обновляем время последней активности
+        session['last_activity'] = datetime.now().isoformat()
 
         # Если это файл из новой системы (documents/ или avatars/)
         if filename.startswith('documents/') or filename.startswith('avatars/'):
