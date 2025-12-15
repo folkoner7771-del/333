@@ -341,8 +341,8 @@ def register_main_routes(app):
                 # Затем сортировка по id в порядке убывания
                 return [
                     db.case(
-                        [(Repatriant.rep_status.isnot(None), 0)],
-                        else_=1
+                        (Repatriant.rep_status.isnot(None), 0),
+                        else_=1,
                     ),
                     Repatriant.id.desc()
                 ]
@@ -448,10 +448,8 @@ def register_main_routes(app):
                     year_str = db.func.right(digits_only, 4)
                     # Преобразуем в число, используя CASE WHEN для безопасного преобразования
                     year_extract = db.case(
-                        [
-                            (db.func.length(year_str) == 4, db.cast(year_str, db.Integer))
-                        ],
-                        else_=None
+                        (db.func.length(year_str) == 4, db.cast(year_str, db.Integer)),
+                        else_=None,
                     )
 
                     children_subquery = db.session.query(
