@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from flask import Flask
 
 from .config import Config
@@ -11,6 +13,12 @@ from .utils.status import check_repatriant_status
 def create_app(config_object=Config) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_object)
+
+    # Нормализуем относительные пути (важно на Windows/при запуске из IDE)
+    base_dir = Path(__file__).resolve().parent.parent
+    upload_folder = Path(str(app.config.get("UPLOAD_FOLDER", "uploads")))
+    if not upload_folder.is_absolute():
+        app.config["UPLOAD_FOLDER"] = str((base_dir / upload_folder).resolve())
 
     db.init_app(app)
 
